@@ -6,7 +6,7 @@ from sklearn import svm
 from sklearn import neural_network
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import RandomizedSearchCV
-
+from sklearn.datasets import fetch_mldata
 from time import time
 from scipy.stats import randint as sp_randint
 
@@ -30,13 +30,21 @@ def report(results, n_top=3):
             print("Parameters: {0}".format(results['params'][candidate]))
             print("")
 
-header, data, labels = load_csv("datasets/winequality-red.csv")
+#header, data, labels = load_csv("datasets/winequality-red.csv")
 #header, data, labels = load_csv("datasets/bank.csv")
 
-data_train = data[:1200]
-data_test = data[1201:]
-labels_train = np.transpose(labels[:1200])[0]
-labels_test = labels[1201:]
+#data_train = data[:1200]
+#data_test = data[1201:]
+#labels_train = np.transpose(labels[:1200])[0]
+#labels_test = labels[1201:]
+
+mnist = fetch_mldata('MNIST original')
+data_train = mnist.data[:60000]
+data_test = mnist.data[60000:]
+labels_train = mnist.target[:60000]
+labels_test = mnist.target[60000:]
+
+
 print len(data_train), " ", len(data_test)
 
 '''
@@ -64,25 +72,25 @@ infer = dt.predict(data_test)
 '''
 
 print "Starting search for SVM model"
-dt = svm.SVC()
+dt = svm.SVC(C=0.1, verbose=1)
 
 param_dist = {"degree": sp_randint(2, 5),
               "kernel": ['linear', 'poly', 'rbf', 'sigmoid'],
               }
 
 n_iter_search = 15
-random_search = RandomizedSearchCV(dt, param_distributions=param_dist,
-                                   n_iter=n_iter_search, n_jobs=8)
+#random_search = RandomizedSearchCV(dt, param_distributions=param_dist,
+#                                   n_iter=n_iter_search, n_jobs=1, verbose=1)
 
 start = time()
-random_search.fit(data_train, labels_train)
-print("RandomizedSearchCV took %.2f seconds for %d candidates"
-      " parameter settings." % ((time() - start), n_iter_search))
+#random_search.fit(data_train, labels_train)
+#print("RandomizedSearchCV took %.2f seconds for %d candidates"
+#      " parameter settings." % ((time() - start), n_iter_search))
 #print random_search.cv_results_
-report(random_search.cv_results_)
-infer = random_search.predict(data_test)
-accuracy = metrics.accuracy_score(labels_test, infer)
-print "Test accuracy: ", accuracy
+#report(random_search.cv_results_)
+#infer = random_search.predict(data_test)
+#accuracy = metrics.accuracy_score(labels_test, infer)
+#print "Test accuracy: ", accuracy
 
 print "Starting search for decision tree model"
 dt = tree.DecisionTreeClassifier()
@@ -93,7 +101,7 @@ param_dist = {"max_depth": sp_randint(2, 30),
               "min_samples_split": sp_randint(2, 10),
               }
 
-n_iter_search = 5000
+n_iter_search = 1#30
 random_search = RandomizedSearchCV(dt, param_distributions=param_dist,
                                    n_iter=n_iter_search, n_jobs=8)
 
@@ -111,26 +119,26 @@ tree.export_graphviz(random_search.best_estimator_, out_file='tree.dot')
 print "Starting search for KNN model"
 dt = neighbors.KNeighborsClassifier()
 
-param_dist = {"n_neighbors": sp_randint(1, 200),
+param_dist = {"n_neighbors": sp_randint(1, 2),
               "p": sp_randint(1, 2),
               }
 
-n_iter_search = 400
+n_iter_search = 1#30
 random_search = RandomizedSearchCV(dt, param_distributions=param_dist,
-                                   n_iter=n_iter_search, n_jobs=8)
+                                   n_iter=n_iter_search, n_jobs=8, verbose=1)
 
 start = time()
 random_search.fit(data_train, labels_train)
 print("RandomizedSearchCV took %.2f seconds for %d candidates"
       " parameter settings." % ((time() - start), n_iter_search))
-#print random_search.cv_results_
+print random_search.cv_results_
 report(random_search.cv_results_)
 infer = random_search.predict(data_test)
 accuracy = metrics.accuracy_score(labels_test, infer)
 print "Test accuracy: ", accuracy
 
 print "Starting search for neural network model"
-dt = neural_network.MLPClassifier(early_stopping=True)
+dt = neural_network.MLPClassifier(early_stopping=True, verbose=1)
 
 # specify parameters and distributions to sample from
 param_dist = {"hidden_layer_sizes": sp_randint(200,1000),
@@ -142,7 +150,7 @@ param_dist = {"hidden_layer_sizes": sp_randint(200,1000),
               }
 
 # run randomized search
-n_iter_search = 500
+n_iter_search = 1
 random_search = RandomizedSearchCV(dt, param_distributions=param_dist,
                                    n_iter=n_iter_search, n_jobs=8)
 
